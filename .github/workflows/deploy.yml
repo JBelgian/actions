@@ -4,43 +4,30 @@ on:
   push:
     branches:
       - main
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+          
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.8.0
         with:
-          php-version: '8.4'
-          extensions: mbstring, bcmath
-          
-      - name: Install Composer dependencies
-        run: composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
-          
-      - name: Setup deploy key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan ssh.productionserver.be >> ~/.ssh/known_hosts
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
           
       - name: Deploy to server
         run: |
-          # Use rsync with relative path (from home directory)
-          rsync -avz --exclude '.git/' \
+          rsync -e "ssh -o StrictHostKeyChecking=no" -avz --exclude '.git/' \
                      --exclude '.github/' \
                      --exclude 'node_modules/' \
                      --exclude '.env' \
                      --exclude '.env.example' \
-                     ./ productionserverbe@ssh.productionserver.be:www/jordy
+                     ./ productionserverbe@ssh.productionserver.be:www/jordy/
           
       - name: Post-deployment commands
         run: |
-          ssh productionserverbe@ssh.productionserver.be "cd www/jordy && bash post-deploy.sh"
+          ssh -o StrictHostKeyChecking=no productionserverbe@ssh.productionserver.be "cd www/jordy && bash post-deploy.sh"

@@ -1,32 +1,39 @@
 #!/bin/bash
-# This script should be run on the server after deployment
+# Laravel post-deployment script
 
 # Go to the application directory
-cd www/jordy
+cd ~/www/jordy
 
-# Set proper permissions
-find storage -type d -exec chmod 775 {} \;
-find storage -type f -exec chmod 664 {} \;
-chmod 775 bootstrap/cache
+# Basic deployment confirmation
+echo "Files deployed successfully to www/jordy"
 
-# If this is the first deployment, copy the environment file
+# Check if .env file exists, if not notify to create one
 if [ ! -f .env ]; then
-    cp .env.production.example .env
-    # Generate application key
-    php artisan key:generate
-    echo "Please configure your .env file with the correct database credentials and other settings"
+    echo "⚠️  WARNING: .env file not found!"
+    echo "Please create a .env file by copying .env.example and configuring it for your environment."
+    echo "Run: cp .env.example .env && php artisan key:generate"
 fi
 
-# Run migrations
-php artisan migrate --force
+# Display PHP version for verification
+php -v
 
-# Clear caches
-php artisan config:clear
+# Laravel deployment tasks
+echo "📦 Running Laravel deployment commands..."
+
+# Install/update PHP dependencies with Composer
+echo "🔄 Updating Composer dependencies..."
+composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# Clear all caches
 php artisan cache:clear
-php artisan view:clear
+php artisan config:clear
 php artisan route:clear
+php artisan view:clear
 
-# Optimize
-php artisan optimize
+# Create storage symlink if it doesn't exist
+php artisan storage:link
 
-echo "Deployment completed successfully!"
+# Run migrations (optional, uncomment if needed)
+# php artisan migrate --force
+
+echo "✅ Deployment completed successfully!"
